@@ -1,88 +1,115 @@
 const d = document;
 
-const products = [
-  {
-    id: 1,
-    title: "Baskets",
-    price: 100,
-    image: "baskets.png",
-    description: "This is a basket",
-  },
-  {
-    id: 2,
-    title: "Socks",
-    price: 20,
-    image: "socks.png",
-    description: "This is a socks",
-  },
-  {
-    id: 3,
-    title: "Bag",
-    price: 50,
-    image: "bag.png",
-    description: "This is a Bag",
-  },
-];
-
-const shoppingCart = [];
-
-const addToShoppingCart = (product) => {
-  const item = shoppingCart.find((item) => item.id === product.id);
-  if (item) {
-    item.quantity++;
-  } else {
-    shoppingCart.push({ ...product, quantity: 1, favorite: false });
+class Product {
+  constructor(id, name, price, image, description) {
+    this.id = id;
+    this.name = name;
+    this.price = price;
+    this.image = image;
+    this.description = description;
   }
-};
+}
 
-const removeFromShoppingCart = (product) => {
-  const item = shoppingCart.find((item) => item.id === product.id);
-  if (!item) return;
-  item.quantity--;
-  if (item.quantity <= 0 && !item.favorite) {
-    shoppingCart.splice(shoppingCart.indexOf(item), 1);
+class ShoppingCartItem {
+  constructor(product, quantity = 1) {
+    this.product = product;
+    this.quantity = quantity;
+    this.favorite = false;
   }
-};
 
-const deleteFromShoppingCart = (product) => {
-  const item = shoppingCart.find((item) => item.id === product.id);
-  if (item) {
+  getTotalPrice() {
+    return this.product.price * this.quantity;
+  }
+}
+
+class ShoppingCart {
+  constructor() {
+    this.items = [];
+  }
+
+  getTotalPrice() {
+    return this.items.reduce(
+      (total, item) => total + item.getTotalPrice(),
+      0,
+    );
+  }
+
+  addItem(product) {
+    const item = this.items.find(
+      (cartItem) => cartItem.product.id === product.id,
+    );
+    if (item) {
+      item.quantity++;
+    } else {
+      this.items.push(new ShoppingCartItem(product, 1));
+    }
+  }
+
+  removeItem(product) {
+    const item = this.items.find(
+      (cartItem) => cartItem.product.id === product.id,
+    );
+    if (!item) return;
+    item.quantity--;
+    if (item.quantity <= 0 && !item.favorite) {
+      this.items.splice(this.items.indexOf(item), 1);
+    }
+  }
+
+  deleteItem(product) {
+    const item = this.items.find(
+      (cartItem) => cartItem.product.id === product.id,
+    );
+    if (!item) return;
     if (item.favorite) {
       item.quantity = 0;
     } else {
-      shoppingCart.splice(shoppingCart.indexOf(item), 1);
+      this.items.splice(this.items.indexOf(item), 1);
     }
   }
-};
 
-const toggleFavorite = (product) => {
-  let item = shoppingCart.find((item) => item.id === product.id);
-  if (!item) {
-    item = { ...product, quantity: 0, favorite: false };
-    shoppingCart.push(item);
+  toggleFavorite(product) {
+    let item = this.items.find(
+      (cartItem) => cartItem.product.id === product.id,
+    );
+    if (!item) {
+      item = new ShoppingCartItem(product, 0);
+      this.items.push(item);
+    }
+
+    item.favorite = !item.favorite;
+
+    if (item.quantity === 0 && !item.favorite) {
+      this.items.splice(this.items.indexOf(item), 1);
+    }
   }
 
-  item.favorite = !item.favorite;
-
-  if (item.quantity === 0 && !item.favorite) {
-    shoppingCart.splice(shoppingCart.indexOf(item), 1);
+  getCartItem(productId) {
+    return this.items.find((item) => item.product.id === productId);
   }
-};
 
-const getCartItem = (productId) => {
-  return shoppingCart.find((item) => item.id === productId);
-};
+  displayCartItems() {
+    return this.items.map((item) => ({
+      name: item.product.name,
+      quantity: item.quantity,
+      unitPrice: item.product.price,
+      total: item.getTotalPrice(),
+      favorite: item.favorite,
+    }));
+  }
+}
 
-const getTotalPrice = () => {
-  return shoppingCart.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0,
-  );
-};
+const products = [
+  new Product(1, "Baskets", 100, "baskets.png", "This is a basket"),
+  new Product(2, "Socks", 20, "socks.png", "This is a socks"),
+  new Product(3, "Bag", 50, "bag.png", "This is a Bag"),
+];
+
+const shoppingCart = new ShoppingCart();
 
 const renderUI = () => {
   products.forEach((product) => {
-    const item = getCartItem(product.id);
+    const item = shoppingCart.getCartItem(product.id);
     const quantity = item?.quantity || 0;
     const favorite = item?.favorite || false;
 
@@ -101,17 +128,17 @@ const renderUI = () => {
 
   const totalEl = d.querySelector(".total");
   if (totalEl) {
-    totalEl.textContent = `${getTotalPrice()} $`;
+    totalEl.textContent = `${shoppingCart.getTotalPrice()} $`;
   }
 };
 
 const isProductFavorite = (productId) => {
-  const item = getCartItem(productId);
+  const item = shoppingCart.getCartItem(productId);
   return item ? item.favorite : false;
 };
 
 const getProductQuantity = (productId) => {
-  const item = getCartItem(productId);
+  const item = shoppingCart.getCartItem(productId);
   return item ? item.quantity : 0;
 };
 
@@ -124,9 +151,9 @@ products.forEach((product) => {
   const card = d.createElement("div");
   card.classList.add("card");
   card.innerHTML = `
-  <img src="/assets/${product.image}" class="card-img-top" alt="${product.title}">
+  <img src="/assets/${product.image}" class="card-img-top" alt="${product.name}">
   <div class="card-body">
-    <h5 class="card-title">${product.title}</h5>
+    <h5 class="card-title">${product.name}</h5>
     <p class="card-text">${product.description}</p>
     <h4 class="unit-price">${product.price} $</h4>
     <div>
@@ -152,10 +179,10 @@ productsContainer?.addEventListener("click", (e) => {
   const product = products.find((p) => p.id === productId);
   if (!product) return;
 
-  if (action === "add") addToShoppingCart(product);
-  if (action === "remove") removeFromShoppingCart(product);
-  if (action === "delete") deleteFromShoppingCart(product);
-  if (action === "favorite") toggleFavorite(product);
+  if (action === "add") shoppingCart.addItem(product);
+  if (action === "remove") shoppingCart.removeItem(product);
+  if (action === "delete") shoppingCart.deleteItem(product);
+  if (action === "favorite") shoppingCart.toggleFavorite(product);
 
   renderUI();
 });
